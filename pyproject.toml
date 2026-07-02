@@ -1,0 +1,14 @@
+[project]
+name = "cloud-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "beanie>=2.1.0",
+    "fastapi[all]>=0.139.0",
+    "passlib[argon2]>=1.7.4",
+    "pyjwt>=2.13.0",
+    "sqlalchemy>=2.0.51",
+]
