@@ -70,3 +70,4 @@ class UserPrivateScheme(BaseModel):
     id: UUID
     username: str
     email: str
+    hashed_password: str = Field(default=None, exclude=True)
