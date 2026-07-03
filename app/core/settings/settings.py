@@ -24,7 +24,7 @@ class TokenSettings(BaseModel):
     secret: SecretStr
     algorithm: str
     access_token_expires_minutes: int = 15
-    refresh_token_expires_minutes: int = 30
+    refresh_token_expires_days: int = 30
 
 
 class Settings(BaseSettings):
