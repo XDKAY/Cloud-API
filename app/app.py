@@ -5,6 +5,7 @@ from app.infostructure.db.sqlite.database import (
     sqlite_connect,
     sqlite_disconnect
 )
+from app.infostructure.api import routers
 
 
 @asynccontextmanager
@@ -17,3 +18,5 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     lifespan=lifespan
 )
+
+app.include_router(routers)
