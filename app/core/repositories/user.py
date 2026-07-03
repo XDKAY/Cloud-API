@@ -40,9 +40,9 @@ class SQLUserRepository(AbstractUserRepository):
         self._session = session
 
     async def get_by_id(self, user_id: UUID) -> Optional[UserPrivateScheme]:
-        query = select(self._MODEL.id, self._MODEL.username, self._MODEL.email).filter(self._MODEL.id == user_id)
+        query = select(self._MODEL).filter(self._MODEL.id == user_id)
 
-        result = (await self._session.execute(query)).mappings().one_or_none()
+        result = (await self._session.execute(query)).scalars().one_or_none()
 
         if result:
             return UserPrivateScheme.model_validate(result)
@@ -51,7 +51,7 @@ class SQLUserRepository(AbstractUserRepository):
 
     async def get_existing(self, username: str, email: str) -> Optional[UserPrivateScheme]:
         query = (
-            select(self._MODEL.id, self._MODEL.username, self._MODEL.email)
+            select(self._MODEL)
             .filter(
                 or_(
                     self._MODEL.username == username, 
@@ -60,7 +60,7 @@ class SQLUserRepository(AbstractUserRepository):
             )
         )
 
-        result = (await self._session.execute(query)).mappings().one_or_none()
+        result = (await self._session.execute(query)).scalars().one_or_none()
 
         if result:
             return UserPrivateScheme.model_validate(result)
@@ -71,14 +71,24 @@ class SQLUserRepository(AbstractUserRepository):
         stmt = (
                 insert(self._MODEL)
                 .values(**UserDTO.from_create_scheme(user).model_dump())
-                .returning(self._MODEL.id, self._MODEL.username, self._MODEL.email)
+                .returning(
+                    self._MODEL.id,
+                    self._MODEL.username,
+                    self._MODEL.email,
+                    self._MODEL.hashed_password
+                )
         )
 
-        result = (await self._session.execute(stmt)).one()
+        result = (await self._session.execute(stmt)).first()
 
         await self._session.commit()
 
-        return UserPrivateScheme.model_validate(result)
+        return UserPrivateScheme(
+            id=result[0],
+            username=result[1],
+            email=result[-2],
+            hashed_password=result[-1]
+        )
 
     async def remove(self, user_id: UUID) -> None:
         query = delete(self._MODEL).filter(self._MODEL.id == user_id)
