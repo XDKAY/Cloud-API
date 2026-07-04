@@ -19,3 +19,9 @@ async def create_dir(
     node_model = await node_service.create_node(user_id=current_user.id, node_scheme=node_scheme)
 
     return node_model
+
+@router.delete("/{node_id}")
+async def delete_node(node_id: str, current_user: CurrentUserDep, node_service: NodeServiceDep):
+    await node_service.delete_node(user_id=current_user.id, node_id=node_id)
+
+    return {"message": f"The node with the id {node_id} was successfully deleted"}

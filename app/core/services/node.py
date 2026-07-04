@@ -52,13 +52,13 @@ class NodeService:
 
     async def delete_node(self, user_id: UUID, node_id: str) -> None:
         
-        node = await self._MODEL.find(
+        node = await self._MODEL.find_one(
             self._MODEL.id == PydanticObjectId(node_id),
             self._MODEL.user_id == user_id
         )
 
         if node.parent_id:
-            parent = await self._MODEL.find(
+            parent = await self._MODEL.find_one(
                 self._MODEL.id == node.parent_id
             )
 
