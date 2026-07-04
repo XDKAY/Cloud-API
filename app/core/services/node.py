@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, List
 from uuid import UUID
 from beanie import PydanticObjectId
 
@@ -19,6 +19,16 @@ class NodeService:
 
     def __init__(self) -> None:
         self._fs = FileSystem()
+
+    async def get_nodes(self, user_id: UUID, parent_id: Optional[str]) -> List[Node]:
+
+        parent_object_id = PydanticObjectId(parent_id) if parent_id else None
+
+        return await self._MODEL.find(
+            self._MODEL.user_id == user_id,
+            self._MODEL.parent_id == parent_object_id,
+            self._MODEL.name != "",
+        ).to_list()
 
     async def create_node(self, user_id: UUID, node_scheme: NodeCreateScheme, file_object: Optional[Any] = None) -> Node:
         node_model = Node(
