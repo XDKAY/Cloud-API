@@ -1,0 +1,85 @@
+from typing import Any, Optional
+from uuid import UUID
+from beanie import PydanticObjectId
+
+from app.core.schemes.node import NodeCreateScheme
+from app.core.utils.file_system import FileSystem
+
+from app.core.exceptions.file_system import (
+    FileSystemExistingDirectoryError,
+    FileSystemIsNotEmptyDirectoryError
+)
+
+from app.infostructure.db.mongo.models.node import Node
+
+
+
+class NodeService:
+    _MODEL = Node
+
+    def __init__(self) -> None:
+        self._fs = FileSystem()
+
+    async def create_node(self, user_id: UUID, node_scheme: NodeCreateScheme, file_object: Optional[Any] = None) -> Node:
+        node_model = Node(
+            **node_scheme.model_dump(),
+            user_id=user_id
+        )
+
+        if node_scheme.type == "dir":
+            if not node_scheme.parent_id:
+                node_model.path = node_scheme.name
+                await node_model.save()
+                
+            else:
+                parent = await self._MODEL.find_one(self._MODEL.id == node_scheme.parent_id)
+                node_model.path = f"{parent.path}/{node_scheme.name}"
+                await node_model.save()
+
+                parent.childs.append(node_model.id)
+                await parent.save()
+
+            try:
+                await self._fs.create_dir(user_id=user_id, path=node_model.path)
+            except FileSystemExistingDirectoryError:
+                raise 
+
+        if node_scheme.type == "file":
+            pass
+
+        return node_model
+    
+
+    async def delete_node(self, user_id: UUID, node_id: str) -> None:
+        
+        node = await self._MODEL.find(
+            self._MODEL.id == PydanticObjectId(node_id),
+            self._MODEL.user_id == user_id
+        )
+
+        if node.parent_id:
+            parent = await self._MODEL.find(
+                self._MODEL.id == node.parent_id
+            )
+
+            parent.childs.remove(node.id)
+
+            await parent.save()
+
+        if node.type == "dir":
+            if node.childs:
+                raise FileSystemIsNotEmptyDirectoryError(name=node.name)
+
+            await self._fs.delete_dir(user_id=user_id, path=node.path)
+            
+        
+        if node.type == "file":
+            pass
+
+        await node.delete()
+
+
+
+
+
+
