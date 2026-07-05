@@ -7,7 +7,8 @@ from app.core.utils.file_system import FileSystem
 
 from app.core.exceptions.file_system import (
     FileSystemExistingDirectoryError,
-    FileSystemIsNotEmptyDirectoryError
+    FileSystemIsNotEmptyDirectoryError,
+    FileSystemExistingFileError,
 )
 
 from app.infostructure.db.mongo.models.node import Node
@@ -39,23 +40,48 @@ class NodeService:
         if node_scheme.type == "dir":
             if not node_scheme.parent_id:
                 node_model.path = node_scheme.name
-                await node_model.save()
                 
             else:
                 parent = await self._MODEL.find_one(self._MODEL.id == node_scheme.parent_id)
                 node_model.path = f"{parent.path}/{node_scheme.name}"
+
+            try:
+                await self._fs.create_dir(user_id=user_id, path=node_model.path)
                 await node_model.save()
+
+                if node_scheme.parent_id:
+                    parent.childs.append(node_model.id)
+                    await parent.save()
+
+            except FileSystemExistingDirectoryError:
+                raise 
+
+        if node_scheme.type == "file":
+            if not node_scheme.parent_id:
+                node_model.path = node_scheme.name
+
+            else:
+                parent = await self._MODEL.find_one(self._MODEL.id == node_scheme.parent_id)
+                node_model.path = f"{parent.path}/{node_scheme.name}"
 
                 parent.childs.append(node_model.id)
                 await parent.save()
 
             try:
-                await self._fs.create_dir(user_id=user_id, path=node_model.path)
-            except FileSystemExistingDirectoryError:
-                raise 
+                await self._fs.create_file(
+                    user_id=user_id, 
+                    path=node_model.path, 
+                    file_object=file_object
+                )
+                
+                await node_model.save()
 
-        if node_scheme.type == "file":
-            pass
+                if node_scheme.parent_id:
+                    parent.childs.append(node_model.id)
+                    await parent.save()
+
+            except FileSystemExistingFileError:
+                raise
 
         return node_model
     
@@ -84,7 +110,7 @@ class NodeService:
             
         
         if node.type == "file":
-            pass
+            await self._fs.delete_file(user_id=user_id, path=node.path)
 
         await node.delete()
 

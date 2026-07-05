@@ -18,3 +18,12 @@ class FileSystemExistingDirectoryError(FileSystemError):
         self.message = f"A directory with that {name} already exists."
 
         super().__init__(self.message)
+
+
+class FileSystemExistingFileError(FileSystemError):
+    """File already exists"""
+
+    def __init_(sefl, name: str) -> None:
+        self.message = f"The c {name} file already exists"
+
+        super().__init__(self.message)

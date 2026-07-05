@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import List, Optional, Annotated
 
-from fastapi import APIRouter, status, Query
+from fastapi import APIRouter, status, Query, UploadFile, File
 
 from app.core.schemes.node import NodeCreateScheme
 from app.infostructure.dependencies.current_user import CurrentUserDep
@@ -34,3 +34,27 @@ async def delete_node(node_id: str, current_user: CurrentUserDep, node_service: 
     await node_service.delete_node(user_id=current_user.id, node_id=node_id)
 
     return {"message": f"The node with the id {node_id} was successfully deleted"}
+
+
+@router.post("/upload", response_model=Node)
+async def upload_file(
+    current_user: CurrentUserDep, 
+    node_service: NodeServiceDep, 
+    file: UploadFile = File(...),
+    parent_id: Optional[str] = Query(default=None)
+    ):
+
+    node_scheme = NodeCreateScheme(
+        name=file.filename,
+        type="file",
+        parent_id=parent_id,
+        size=file.size
+    )
+
+    node_model = await node_service.create_node(
+        user_id=current_user.id, 
+        node_scheme=node_scheme, 
+        file_object=file
+    )
+
+    return node_model

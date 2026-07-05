@@ -1,6 +1,9 @@
+import os
+import shutil
 import anyio
 
-from typing import Optional
+
+from typing import Optional, Any
 from uuid import UUID
 from pathlib import Path
 
@@ -8,6 +11,7 @@ from app.core.settings.settings import settings
 from app.core.exceptions.file_system import (
     FileSystemExistingDirectoryError,
     FileSystemIsNotEmptyDirectoryError,
+    FileSystemExistingFileError,
 )
 
 
@@ -54,6 +58,31 @@ class FileSystem:
 
         except OSError as e:
             raise FileSystemIsNotEmptyDirectoryError(name=path_.name) from e
+
+    @staticmethod
+    async def create_file(user_id: UUID, path: str, file_object: Any):
+        path_ = FileSystem._get_path_to_directory(user_id, path)
+
+        is_exist_path = await anyio.Path(path_).exists()
+
+        if is_exist_path:
+            raise FileSystemExistingFileError(path_.name)
+
+        await file_object.seek(0)
+
+        async with await anyio.open_file(str(path_), "wb") as save_file:
+            while (chunck := await file_object.read(1024 * 1024)):
+                await save_file.write(chunck)
+
+    @staticmethod
+    async def delete_file(user_id: UUID, path: str):
+        path_ = FileSystem._get_path_to_directory(user_id, path)
+
+        is_exist_path = await anyio.Path(path_).exists()
+
+        if is_exist_path:
+            await anyio.to_thread.run_sync(os.remove, path_)
+
 
     @staticmethod
     def _get_path_to_directory(user_id: UUID, path: str) -> Path:
